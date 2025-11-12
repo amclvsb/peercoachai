@@ -10,7 +10,8 @@ import { SessionSummaryForm } from './components/SessionSummaryForm';
 import { SessionHistory } from './components/SessionHistory';
 import { ResourceLibrary } from './components/ResourceLibrary';
 
-import { startLiveSession, analyzeConversationTurn } from './services/geminiService';
+import { startLiveSession, analyzeConversationTurn, generateSpeech } from './services/geminiService';
+import { decode, decodeAudioData } from './utils/audio';
 import type { AnalysisData, TranscriptEntry, Mood, SessionSummary, Resource } from './types';
 
 type View = 'session' | 'history' | 'resources';
@@ -34,11 +35,16 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Idle');
+  const [isCoachSpeaking, setIsCoachSpeaking] = useState(false);
+  const [isAudioFeedbackOn, setIsAudioFeedbackOn] = useState(false);
+
 
   const sessionPromiseRef = useRef<Promise<LiveSession> | null>(null);
   const currentTurnTranscriptRef = useRef('');
   const currentSessionData = useRef<{ id: string; preMood?: Mood; postMood?: Mood }>({ id: '' });
   const localStreamRef = useRef<MediaStream | null>(null);
+  const speechEndTimerRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Load data from localStorage on initial render
   useEffect(() => {
@@ -62,6 +68,42 @@ const App: React.FC = () => {
     localStorage.setItem('peerCoach_resources', JSON.stringify(resources));
   }, [resources]);
 
+  // Effect for playing audio feedback
+  useEffect(() => {
+    if (isAudioFeedbackOn && analysis?.suggestedQuestion) {
+        const playAudio = async () => {
+            try {
+                setStatus('Generating audio cue...');
+                const base64Audio = await generateSpeech(analysis.suggestedQuestion);
+
+                if (!audioContextRef.current) {
+                    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+                }
+                const ctx = audioContextRef.current;
+                
+                const audioBuffer = await decodeAudioData(
+                    decode(base64Audio),
+                    ctx,
+                    24000,
+                    1,
+                );
+
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ctx.destination);
+                source.start();
+                setStatus('Listening...');
+            } catch (err) {
+                console.error("Failed to play audio feedback:", err);
+                setError("Could not generate audio cue.");
+                setStatus('Listening...'); // Reset status
+            }
+        };
+        playAudio();
+    }
+}, [analysis, isAudioFeedbackOn]);
+
+
   const updateLocalStream = (stream: MediaStream | null) => {
     localStreamRef.current = stream;
     setLocalStream(stream);
@@ -77,17 +119,30 @@ const App: React.FC = () => {
       console.error('Analysis error:', err);
       setError('Failed to get analysis from Gemini.');
     } finally {
-        setStatus('Listening...');
+        if(!isAudioFeedbackOn) {
+          setStatus('Listening...');
+        }
     }
-  }, []);
+  }, [isAudioFeedbackOn]);
 
   const onMessage = useCallback((message: any) => {
       if (message.serverContent?.inputTranscription) {
         const text = message.serverContent.inputTranscription.text;
         currentTurnTranscriptRef.current += text;
+        
+        // Coach is speaking
+        setIsCoachSpeaking(true);
+        if (speechEndTimerRef.current) clearTimeout(speechEndTimerRef.current);
+        speechEndTimerRef.current = window.setTimeout(() => {
+            setIsCoachSpeaking(false);
+        }, 1500); // 1.5 second pause indicates end of speech
       }
       
       if (message.serverContent?.turnComplete) {
+        // Coach has finished their turn
+        if (speechEndTimerRef.current) clearTimeout(speechEndTimerRef.current);
+        setIsCoachSpeaking(false);
+
         const fullTurnText = currentTurnTranscriptRef.current;
         if(fullTurnText.trim()){
             setTranscript(prev => [...prev, { speaker: 'Coach', text: fullTurnText }]);
@@ -109,6 +164,12 @@ const App: React.FC = () => {
     setIsSessionActive(false);
     setSessionStage('summary');
     setStatus('Session Ended');
+
+    if (speechEndTimerRef.current) {
+      clearTimeout(speechEndTimerRef.current);
+      speechEndTimerRef.current = null;
+    }
+    setIsCoachSpeaking(false);
   }, []);
 
   const startSession = useCallback(async (mood: Mood) => {
@@ -212,7 +273,12 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col md:flex-row min-h-0">
           <main className="flex-1 flex flex-col p-4 md:p-6 lg:p-8">
             <div className="flex-grow w-full h-full relative">
-              <VideoCall localStream={localStream} isVideoOn={isVideoOn} isSessionActive={isSessionActive} />
+              <VideoCall 
+                localStream={localStream} 
+                isVideoOn={isVideoOn} 
+                isSessionActive={isSessionActive} 
+                isCoachSpeaking={isCoachSpeaking}
+              />
               <ControlBar
                 onStart={() => {}} // Start is handled by MoodTracker now
                 onStop={stopSession}
@@ -225,7 +291,14 @@ const App: React.FC = () => {
             </div>
           </main>
           <aside className="w-full md:w-1/3 xl:w-1/4 bg-gray-800/50 backdrop-blur-sm p-4 md:p-6 border-l border-gray-700 flex flex-col">
-            <CoachingConsole transcript={transcript} analysis={analysis} status={status} error={error} />
+            <CoachingConsole 
+              transcript={transcript} 
+              analysis={analysis} 
+              status={status} 
+              error={error} 
+              isAudioFeedbackOn={isAudioFeedbackOn}
+              onToggleAudioFeedback={() => setIsAudioFeedbackOn(prev => !prev)}
+            />
           </aside>
         </div>
       );

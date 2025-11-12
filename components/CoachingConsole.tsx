@@ -1,11 +1,15 @@
 import React from 'react';
 import type { AnalysisData, TranscriptEntry } from '../types';
+import { SpeakerIcon } from './icons/SpeakerIcon';
+import { SpeakerOffIcon } from './icons/SpeakerOffIcon';
 
 interface CoachingConsoleProps {
   transcript: TranscriptEntry[];
   analysis: AnalysisData | null;
   status: string;
   error: string | null;
+  isAudioFeedbackOn: boolean;
+  onToggleAudioFeedback: () => void;
 }
 
 const MetricDisplay: React.FC<{ label: string; value: string | number; unit?: string }> = ({ label, value, unit }) => (
@@ -31,13 +35,23 @@ const ProgressBar: React.FC<{ label: string; value: number }> = ({ label, value 
 );
 
 
-export const CoachingConsole: React.FC<CoachingConsoleProps> = ({ transcript, analysis, status, error }) => {
+export const CoachingConsole: React.FC<CoachingConsoleProps> = ({ transcript, analysis, status, error, isAudioFeedbackOn, onToggleAudioFeedback }) => {
   return (
     <div className="flex flex-col h-full text-gray-300">
-      <h2 className="text-xl font-bold mb-4 text-white border-b border-gray-700 pb-2">AI Analysis Console</h2>
+      <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-700">
+        <h2 className="text-xl font-bold text-white">AI Analysis Console</h2>
+        <button
+            onClick={onToggleAudioFeedback}
+            className="flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+            aria-label={isAudioFeedbackOn ? "Disable audio feedback" : "Enable audio feedback"}
+        >
+            {isAudioFeedbackOn ? <SpeakerIcon className="h-5 w-5 text-cyan-400"/> : <SpeakerOffIcon className="h-5 w-5 text-gray-400"/>}
+            <span className={`text-xs font-medium ${isAudioFeedbackOn ? 'text-white' : 'text-gray-400'}`}>Audio Cue</span>
+        </button>
+      </div>
       
       <div className="mb-4 p-3 bg-gray-900 rounded-lg flex items-center space-x-3">
-        <div className={`w-3 h-3 rounded-full animate-pulse ${status === 'Listening...' ? 'bg-green-500' : status === 'Analyzing...' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+        <div className={`w-3 h-3 rounded-full animate-pulse ${status === 'Listening...' ? 'bg-green-500' : status === 'Analyzing...' || status === 'Generating audio cue...' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
         <span className="text-sm font-medium">{status}</span>
       </div>
 

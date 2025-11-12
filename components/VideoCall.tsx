@@ -4,9 +4,10 @@ interface VideoCallProps {
   localStream: MediaStream | null;
   isVideoOn: boolean;
   isSessionActive: boolean;
+  isCoachSpeaking: boolean;
 }
 
-export const VideoCall: React.FC<VideoCallProps> = ({ localStream, isVideoOn, isSessionActive }) => {
+export const VideoCall: React.FC<VideoCallProps> = ({ localStream, isVideoOn, isSessionActive, isCoachSpeaking }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -16,19 +17,23 @@ export const VideoCall: React.FC<VideoCallProps> = ({ localStream, isVideoOn, is
   }, [localStream]);
 
   return (
-    <div className="w-full h-full bg-black rounded-lg overflow-hidden shadow-2xl relative">
+    <div className={`w-full h-full bg-black rounded-lg overflow-hidden shadow-2xl relative transition-all duration-300 ease-in-out ${isCoachSpeaking ? 'ring-4 ring-cyan-500' : 'ring-0 ring-transparent'}`}>
       {/* Remote Participant View */}
       <div className="w-full h-full flex items-center justify-center bg-gray-800">
-        <img 
-            src="https://picsum.photos/seed/client/1200/900" 
-            alt="Client" 
-            className="object-cover w-full h-full opacity-50"
+        <video 
+            src="https://cdn.pixabay.com/video/2024/03/13/203341-925345995_large.mp4" 
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="object-cover w-full h-full"
         />
+        <div className="absolute inset-0 bg-black/40"></div>
         <div className="absolute inset-0 flex items-center justify-center">
             {!isSessionActive ? (
                 <div className="text-center p-8 bg-black/50 rounded-lg">
                     <h2 className="text-3xl font-semibold text-gray-200">Session Ended</h2>
-                    <p className="text-gray-400 mt-2">Click the phone icon to start a new coaching session.</p>
+                    <p className="text-gray-400 mt-2">Ready for your next session.</p>
                 </div>
             ) : (
                  <div className="absolute top-4 left-4 bg-black/50 px-3 py-1 rounded-full text-sm">
