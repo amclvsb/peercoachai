@@ -138,6 +138,13 @@ const App: React.FC = () => {
         }, 1500); // 1.5 second pause indicates end of speech
       }
       
+      // Per Gemini API guidelines, we must handle the audio output stream,
+      // even if we don't intend to play it. This ensures connection stability.
+      const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+      if (audioData) {
+        // Audio chunk received from Gemini. We are not playing it back in this app.
+      }
+      
       if (message.serverContent?.turnComplete) {
         // Coach has finished their turn
         if (speechEndTimerRef.current) clearTimeout(speechEndTimerRef.current);
