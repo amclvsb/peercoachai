@@ -1,0 +1,8 @@
+{
+  "name": "Peer Support AI Coach",
+  "description": "A real-time coaching interface providing AI-powered feedback and analysis during video conversations using Gemini. It analyzes interactions, positivity, and provides actionable insights for peer coaches.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
