@@ -1,5 +1,26 @@
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+   <p>
+   Peer Coach AI is an AI-powered peer support application built on Google Gemini API. It functions as an empathetic conversational assistant designed to provide peer coaching and emotional support, allowing users to discuss any concerns or feelings they may have in a non-judgmental environment.
+
+### Main Function Points
+- AI-powered peer coaching and support conversations powered by Google Gemini
+- Emotional support assistant that listens and responds to user concerns
+- Web-based application accessible through AI Studio platform
+- Conversational interface for open discussion on any topic
+- Local development environment with simple setup process
+
+### Technology Stack
+- **Frontend:** TypeScript (98.5%), HTML (1.5%)
+- **Build Tool:** Vite
+- **Package Manager:** npm
+- **Runtime:** Node.js
+- **API:** Google Gemini API
+- **Framework:** React (inferred from .tsx files)
+
+### License
+No specific license information provided in the repository documentation
+   </p>
 </div>
 
 # Run and deploy your AI Studio app
